@@ -1,0 +1,41 @@
+// Money (salaryAmount) is stored in MINOR units (e.g. cents/paise) as an Int
+// to avoid floating-point drift. Currency rates (CurrencyRate.rateToUsd) are
+// the only Float values, used for aggregation/reporting, not as money itself.
+//
+// This schema is intentionally open to a future SalaryChange history table
+// (round 2) without altering Employee — that table would reference
+// Employee.id and record prior salaryAmount/salaryCurrency/changedAt values.
+
+generator client {
+  provider = "prisma-client"
+  output   = "../src/generated/prisma"
+}
+
+datasource db {
+  provider = "sqlite"
+}
+
+model Employee {
+  id             String   @id @default(uuid())
+  name           String
+  email          String   @unique
+  department     String
+  country        String
+  role           String
+  // money stored in MINOR units (e.g. cents/paise) as an integer to avoid
+  // floating-point drift
+  salaryAmount   Int
+  salaryCurrency String // ISO 4217 code, e.g. "USD", "INR", "EUR"
+  joinedAt       DateTime
+  createdAt      DateTime @default(now())
+  updatedAt      DateTime @updatedAt
+
+  @@index([department])
+  @@index([country])
+}
+
+model CurrencyRate {
+  currencyCode String   @id // ISO 4217 code
+  rateToUsd    Float // 1 unit of this currency = rateToUsd USD
+  updatedAt    DateTime @updatedAt
+}
