@@ -1,7 +1,9 @@
+import { useState } from 'react'
 import type { Employee } from '@/api/types'
 import { formatCurrency } from '@/lib/formatCurrency'
 import { Button } from '@/components/ui/button'
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table'
+import { EmployeeDetailDialog } from '@/components/EmployeeDetailDialog'
 
 interface EmployeeTableProps {
   data: Employee[]
@@ -11,9 +13,21 @@ interface EmployeeTableProps {
   loading: boolean
   error: string | null
   setPage: (page: number) => void
+  onSalaryUpdated: () => void
 }
 
-export function EmployeeTable({ data, total, page, totalPages, loading, error, setPage }: EmployeeTableProps) {
+export function EmployeeTable({
+  data,
+  total,
+  page,
+  totalPages,
+  loading,
+  error,
+  setPage,
+  onSalaryUpdated,
+}: EmployeeTableProps) {
+  const [selectedEmployee, setSelectedEmployee] = useState<Employee | null>(null)
+
   return (
     <div className="flex w-full max-w-4xl flex-col gap-4">
       <Table>
@@ -52,7 +66,11 @@ export function EmployeeTable({ data, total, page, totalPages, loading, error, s
           {!error &&
             !loading &&
             data.map((employee) => (
-              <TableRow key={employee.id}>
+              <TableRow
+                key={employee.id}
+                className="cursor-pointer"
+                onClick={() => setSelectedEmployee(employee)}
+              >
                 <TableCell>{employee.name}</TableCell>
                 <TableCell>{employee.email}</TableCell>
                 <TableCell>{employee.department}</TableCell>
@@ -80,6 +98,15 @@ export function EmployeeTable({ data, total, page, totalPages, loading, error, s
           </Button>
         </div>
       </div>
+
+      <EmployeeDetailDialog
+        employee={selectedEmployee}
+        onClose={() => setSelectedEmployee(null)}
+        onSaved={() => {
+          setSelectedEmployee(null)
+          onSalaryUpdated()
+        }}
+      />
     </div>
   )
 }

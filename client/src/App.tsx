@@ -17,6 +17,7 @@ function App() {
     setSearch,
     setDepartment,
     setCountry,
+    refetch,
   } = useEmployees()
 
   return (
@@ -38,6 +39,7 @@ function App() {
         loading={loading}
         error={error}
         setPage={setPage}
+        onSalaryUpdated={refetch}
       />
     </div>
   )

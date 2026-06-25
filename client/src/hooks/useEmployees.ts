@@ -14,6 +14,7 @@ export function useEmployees() {
   const [search, setSearchState] = useState('')
   const [department, setDepartmentState] = useState('')
   const [country, setCountryState] = useState('')
+  const [refreshKey, setRefreshKey] = useState(0)
 
   useEffect(() => {
     let cancelled = false
@@ -44,7 +45,7 @@ export function useEmployees() {
     return () => {
       cancelled = true
     }
-  }, [page, search, department, country])
+  }, [page, search, department, country, refreshKey])
 
   const setPage = useCallback(
     (next: number) => {
@@ -69,6 +70,10 @@ export function useEmployees() {
     setPageState(1)
   }, [])
 
+  const refetch = useCallback(() => {
+    setRefreshKey((key) => key + 1)
+  }, [])
+
   return {
     data,
     total,
@@ -84,5 +89,6 @@ export function useEmployees() {
     setSearch,
     setDepartment,
     setCountry,
+    refetch,
   }
 }

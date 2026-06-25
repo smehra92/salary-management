@@ -11,3 +11,6 @@ export const DEPARTMENTS = [
 ]
 
 export const COUNTRIES = ['India', 'USA', 'Germany', 'UK', 'Singapore', 'Australia']
+
+// Mirrors the known ISO currency codes validated by the server (employee.service.ts).
+export const CURRENCIES = ['USD', 'INR', 'EUR', 'GBP', 'SGD', 'AUD']
