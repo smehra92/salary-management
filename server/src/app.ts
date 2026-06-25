@@ -1,4 +1,5 @@
 import express from 'express';
+import cors from 'cors';
 import { healthRouter } from './routes/health.route.js';
 import { createEmployeeRouter } from './routes/employee.route.js';
 import { createAnalyticsRouter } from './routes/analytics.route.js';
@@ -15,6 +16,7 @@ export function createApp() {
     findAllCurrencyRates: currencyRateRepository.findAllCurrencyRates,
   };
 
+  app.use(cors({ origin: 'http://localhost:5173' }));
   app.use(express.json());
   app.use(healthRouter);
   app.use(createEmployeeRouter(createEmployeeService(employeeRepository)));
