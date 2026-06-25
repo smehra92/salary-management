@@ -1,3 +1,5 @@
+"Prompt used with Claude Code to draft the architecture document."
+
 Create docs/architecture.md for this salary-management project. Do NOT write any
 app code — this is a documentation-only step. Capture these decisions, which I've
 already made, and write them up clearly:
