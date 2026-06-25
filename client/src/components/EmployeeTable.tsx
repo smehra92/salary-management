@@ -1,11 +1,19 @@
-import { useEmployees } from '@/hooks/useEmployees'
+import type { Employee } from '@/api/types'
 import { formatCurrency } from '@/lib/formatCurrency'
 import { Button } from '@/components/ui/button'
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table'
 
-export function EmployeeTable() {
-  const { data, total, page, totalPages, loading, error, setPage } = useEmployees()
+interface EmployeeTableProps {
+  data: Employee[]
+  total: number
+  page: number
+  totalPages: number
+  loading: boolean
+  error: string | null
+  setPage: (page: number) => void
+}
 
+export function EmployeeTable({ data, total, page, totalPages, loading, error, setPage }: EmployeeTableProps) {
   return (
     <div className="flex w-full max-w-4xl flex-col gap-4">
       <Table>
