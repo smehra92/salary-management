@@ -1,10 +1,11 @@
 import type { Employee } from '../generated/prisma/client.js';
 import { Prisma } from '../generated/prisma/client.js';
 import type { EmployeeForAnalytics } from '../domain/analytics.js';
-import { NotFoundError } from '../domain/errors.js';
+import { ConflictError, NotFoundError } from '../domain/errors.js';
 import { db } from '../db.js';
 
 const RECORD_NOT_FOUND = 'P2025';
+const UNIQUE_CONSTRAINT_VIOLATION = 'P2002';
 
 interface EmployeeFilters {
   search?: string;
@@ -71,6 +72,28 @@ export async function updateSalary(id: string, data: UpdateSalaryData): Promise<
   } catch (error) {
     if (error instanceof Prisma.PrismaClientKnownRequestError && error.code === RECORD_NOT_FOUND) {
       throw new NotFoundError(`Employee not found: ${id}`);
+    }
+    throw error;
+  }
+}
+
+interface CreateEmployeeData {
+  name: string;
+  email: string;
+  department: string;
+  country: string;
+  role: string;
+  salaryAmount: number;
+  salaryCurrency: string;
+  joinedAt: Date;
+}
+
+export async function createEmployee(data: CreateEmployeeData): Promise<Employee> {
+  try {
+    return await db.employee.create({ data });
+  } catch (error) {
+    if (error instanceof Prisma.PrismaClientKnownRequestError && error.code === UNIQUE_CONSTRAINT_VIOLATION) {
+      throw new ConflictError(`Email already in use: ${data.email}`);
     }
     throw error;
   }
