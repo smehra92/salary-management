@@ -1,7 +1,7 @@
 import { beforeEach, describe, expect, it } from 'vitest';
 import request from 'supertest';
 import { createApp } from '../app.js';
-import { EMPLOYEE_FILTER_FIXTURE } from '../test/fixtures.js';
+import { CURRENCY_RATES_FIXTURE, EMPLOYEE_FILTER_FIXTURE } from '../test/fixtures.js';
 import { resetDb, testDb } from '../test/db.js';
 
 const TOTAL_SEEDED = 12;
@@ -131,5 +131,64 @@ describe('GET /employees', () => {
         'Grace Lee',
       ]);
     });
+  });
+});
+
+describe('PATCH /employees/:id/salary', () => {
+  let employeeId: string;
+
+  beforeEach(async () => {
+    await resetDb();
+    const employee = await testDb.employee.create({ data: buildEmployee(0) });
+    employeeId = employee.id;
+    await testDb.currencyRate.createMany({ data: CURRENCY_RATES_FIXTURE });
+  });
+
+  it('returns 200 with the updated employee on valid input', async () => {
+    const app = createApp();
+
+    const response = await request(app)
+      .patch(`/employees/${employeeId}/salary`)
+      .send({ amountMajor: 75_000.5, currency: 'EUR' });
+
+    expect(response.status).toBe(200);
+    expect(response.body.id).toBe(employeeId);
+    expect(response.body.salaryAmount).toBe(7_500_050);
+    expect(response.body.salaryCurrency).toBe('EUR');
+  });
+
+  it('returns 400 for an invalid amount', async () => {
+    const app = createApp();
+
+    const response = await request(app)
+      .patch(`/employees/${employeeId}/salary`)
+      .send({ amountMajor: -100, currency: 'USD' });
+
+    expect(response.status).toBe(400);
+    expect(response.body.error).toBeTruthy();
+  });
+
+  it('returns 400 for an unknown currency', async () => {
+    const app = createApp();
+
+    const response = await request(app)
+      .patch(`/employees/${employeeId}/salary`)
+      .send({ amountMajor: 1000, currency: 'XYZ' });
+
+    expect(response.status).toBe(400);
+    expect(response.body.error).toBeTruthy();
+  });
+
+  it('returns 404 for an unknown employee id', async () => {
+    const app = createApp();
+
+    const response = await request(app)
+      .patch('/employees/00000000-0000-0000-0000-000000000000/salary')
+      .send({ amountMajor: 1000, currency: 'USD' });
+
+    expect(response.status).toBe(404);
+    // Distinguishes a deliberate not-found JSON response from Express's default
+    // (unmatched-route) 404, which has no body — guards against a false-positive RED here.
+    expect(response.body.error).toBeTruthy();
   });
 });

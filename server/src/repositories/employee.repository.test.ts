@@ -1,7 +1,8 @@
 import { afterAll, beforeEach, describe, expect, it } from 'vitest';
 import { EMPLOYEE_FILTER_FIXTURE } from '../test/fixtures.js';
 import { resetDb, testDb } from '../test/db.js';
-import { findEmployees } from './employee.repository.js';
+import { NotFoundError } from '../domain/errors.js';
+import { findEmployees, updateSalary } from './employee.repository.js';
 
 function buildEmployee(index: number) {
   return {
@@ -16,11 +17,11 @@ function buildEmployee(index: number) {
   };
 }
 
-describe('findEmployees', () => {
-  afterAll(async () => {
-    await testDb.$disconnect();
-  });
+afterAll(async () => {
+  await testDb.$disconnect();
+});
 
+describe('findEmployees', () => {
   describe('pagination', () => {
     beforeEach(async () => {
       await resetDb();
@@ -100,5 +101,33 @@ describe('findEmployees', () => {
       expect(firstPage.data.map((employee) => employee.name)).toEqual(['Alice Johnson', 'Bob Smith']);
       expect(secondPage.data.map((employee) => employee.name)).toEqual(['Frank Engineer', 'Grace Lee']);
     });
+  });
+});
+
+describe('updateSalary', () => {
+  let employeeId: string;
+
+  beforeEach(async () => {
+    await resetDb();
+    const employee = await testDb.employee.create({ data: buildEmployee(0) });
+    employeeId = employee.id;
+  });
+
+  it('changes the row and returns the updated employee', async () => {
+    const updated = await updateSalary(employeeId, { salaryAmount: 7_500_050, salaryCurrency: 'EUR' });
+
+    expect(updated.id).toBe(employeeId);
+    expect(updated.salaryAmount).toBe(7_500_050);
+    expect(updated.salaryCurrency).toBe('EUR');
+
+    const reloaded = await testDb.employee.findUniqueOrThrow({ where: { id: employeeId } });
+    expect(reloaded.salaryAmount).toBe(7_500_050);
+    expect(reloaded.salaryCurrency).toBe('EUR');
+  });
+
+  it('signals not-found when the id does not exist', async () => {
+    await expect(
+      updateSalary('00000000-0000-0000-0000-000000000000', { salaryAmount: 1000, salaryCurrency: 'USD' }),
+    ).rejects.toThrow(NotFoundError);
   });
 });

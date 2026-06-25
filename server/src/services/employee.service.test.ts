@@ -1,9 +1,17 @@
 import { describe, expect, it, vi } from 'vitest';
+import { NotFoundError, ValidationError } from '../domain/errors.js';
 import { createEmployeeService } from './employee.service.js';
 
 function createFakeRepo(total: number) {
   return {
     findEmployees: vi.fn().mockResolvedValue({ data: [], total }),
+  };
+}
+
+function createFakeUpdateRepo(updateSalary: ReturnType<typeof vi.fn>) {
+  return {
+    findEmployees: vi.fn(),
+    updateSalary,
   };
 }
 
@@ -79,6 +87,60 @@ describe('createEmployeeService', () => {
         take: 25,
         filters: { search: 'ann', department: 'Engineering', country: 'USA' },
       });
+    });
+  });
+
+  describe('updateEmployeeSalary', () => {
+    it('converts amountMajor to minor units and calls repo.updateSalary with the right args', async () => {
+      const updateSalary = vi.fn().mockResolvedValue({ id: 'abc', salaryAmount: 7_500_050, salaryCurrency: 'EUR' });
+      const repo = createFakeUpdateRepo(updateSalary);
+      const service = createEmployeeService(repo);
+
+      await service.updateEmployeeSalary('abc', { amountMajor: 75_000.5, currency: 'EUR' });
+
+      expect(updateSalary).toHaveBeenCalledWith('abc', { salaryAmount: 7_500_050, salaryCurrency: 'EUR' });
+    });
+
+    it('rejects a non-positive, NaN, or non-finite amount without calling the repo', async () => {
+      const updateSalary = vi.fn();
+      const repo = createFakeUpdateRepo(updateSalary);
+      const service = createEmployeeService(repo);
+
+      await expect(service.updateEmployeeSalary('abc', { amountMajor: 0, currency: 'USD' })).rejects.toThrow(
+        ValidationError,
+      );
+      await expect(service.updateEmployeeSalary('abc', { amountMajor: -50, currency: 'USD' })).rejects.toThrow(
+        ValidationError,
+      );
+      await expect(service.updateEmployeeSalary('abc', { amountMajor: NaN, currency: 'USD' })).rejects.toThrow(
+        ValidationError,
+      );
+      await expect(
+        service.updateEmployeeSalary('abc', { amountMajor: Infinity, currency: 'USD' }),
+      ).rejects.toThrow(ValidationError);
+
+      expect(updateSalary).not.toHaveBeenCalled();
+    });
+
+    it('rejects an unknown currency without calling the repo', async () => {
+      const updateSalary = vi.fn();
+      const repo = createFakeUpdateRepo(updateSalary);
+      const service = createEmployeeService(repo);
+
+      await expect(service.updateEmployeeSalary('abc', { amountMajor: 1000, currency: 'XYZ' })).rejects.toThrow(
+        ValidationError,
+      );
+      expect(updateSalary).not.toHaveBeenCalled();
+    });
+
+    it('propagates a not-found error from the repo', async () => {
+      const updateSalary = vi.fn().mockRejectedValue(new NotFoundError('Employee not found: missing'));
+      const repo = createFakeUpdateRepo(updateSalary);
+      const service = createEmployeeService(repo);
+
+      await expect(
+        service.updateEmployeeSalary('missing', { amountMajor: 1000, currency: 'USD' }),
+      ).rejects.toThrow(NotFoundError);
     });
   });
 });
