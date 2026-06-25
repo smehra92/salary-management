@@ -1,5 +1,6 @@
 import { Router } from 'express';
 import type { createEmployeeService } from '../services/employee.service.js';
+import { NotFoundError, ValidationError } from '../domain/errors.js';
 
 type EmployeeService = ReturnType<typeof createEmployeeService>;
 
@@ -29,6 +30,26 @@ export function createEmployeeRouter(employeeService: EmployeeService): Router {
     const result = await employeeService.listEmployees({ page, pageSize, search, department, country });
 
     res.status(200).json(result);
+  });
+
+  router.patch('/employees/:id/salary', async (req, res) => {
+    try {
+      const updated = await employeeService.updateEmployeeSalary(req.params.id, {
+        amountMajor: req.body?.amountMajor,
+        currency: req.body?.currency,
+      });
+      res.status(200).json(updated);
+    } catch (error) {
+      if (error instanceof ValidationError) {
+        res.status(400).json({ error: error.message });
+        return;
+      }
+      if (error instanceof NotFoundError) {
+        res.status(404).json({ error: error.message });
+        return;
+      }
+      throw error;
+    }
   });
 
   return router;

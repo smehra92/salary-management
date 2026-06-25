@@ -1,6 +1,10 @@
-import type { Employee, Prisma } from '../generated/prisma/client.js';
+import type { Employee } from '../generated/prisma/client.js';
+import { Prisma } from '../generated/prisma/client.js';
 import type { EmployeeForAnalytics } from '../domain/analytics.js';
+import { NotFoundError } from '../domain/errors.js';
 import { db } from '../db.js';
+
+const RECORD_NOT_FOUND = 'P2025';
 
 interface EmployeeFilters {
   search?: string;
@@ -54,4 +58,20 @@ export async function findAllEmployeeSalaries(): Promise<EmployeeForAnalytics[]>
   return db.employee.findMany({
     select: { department: true, country: true, salaryAmount: true, salaryCurrency: true },
   });
+}
+
+interface UpdateSalaryData {
+  salaryAmount: number;
+  salaryCurrency: string;
+}
+
+export async function updateSalary(id: string, data: UpdateSalaryData): Promise<Employee> {
+  try {
+    return await db.employee.update({ where: { id }, data });
+  } catch (error) {
+    if (error instanceof Prisma.PrismaClientKnownRequestError && error.code === RECORD_NOT_FOUND) {
+      throw new NotFoundError(`Employee not found: ${id}`);
+    }
+    throw error;
+  }
 }

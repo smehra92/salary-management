@@ -1,8 +1,10 @@
 import type { Employee } from '../generated/prisma/client.js';
+import { ValidationError } from '../domain/errors.js';
 
 const DEFAULT_PAGE = 1;
 const DEFAULT_PAGE_SIZE = 25;
 const MAX_PAGE_SIZE = 100;
+const KNOWN_CURRENCY_CODES = ['USD', 'INR', 'EUR', 'GBP', 'SGD', 'AUD'];
 
 interface EmployeeFilters {
   search?: string;
@@ -16,6 +18,12 @@ interface EmployeeRepository {
     take: number;
     filters?: EmployeeFilters;
   }): Promise<{ data: Employee[]; total: number }>;
+  updateSalary(id: string, data: { salaryAmount: number; salaryCurrency: string }): Promise<Employee>;
+}
+
+interface UpdateSalaryParams {
+  amountMajor: number;
+  currency: string;
 }
 
 interface ListEmployeesParams extends EmployeeFilters {
@@ -67,5 +75,19 @@ export function createEmployeeService(repo: EmployeeRepository) {
     };
   }
 
-  return { listEmployees };
+  async function updateEmployeeSalary(id: string, { amountMajor, currency }: UpdateSalaryParams): Promise<Employee> {
+    if (!Number.isFinite(amountMajor) || amountMajor <= 0) {
+      throw new ValidationError(`Amount must be a finite number greater than 0, received: ${amountMajor}`);
+    }
+
+    if (!KNOWN_CURRENCY_CODES.includes(currency)) {
+      throw new ValidationError(`Unknown currency code: "${currency}"`);
+    }
+
+    const salaryAmount = Math.round(amountMajor * 100);
+
+    return repo.updateSalary(id, { salaryAmount, salaryCurrency: currency });
+  }
+
+  return { listEmployees, updateEmployeeSalary };
 }

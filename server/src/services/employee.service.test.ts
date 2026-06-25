@@ -1,14 +1,19 @@
+import type { Mock } from 'vitest';
 import { describe, expect, it, vi } from 'vitest';
+import type { Employee } from '../generated/prisma/client.js';
 import { NotFoundError, ValidationError } from '../domain/errors.js';
 import { createEmployeeService } from './employee.service.js';
+
+type UpdateSalaryFn = (id: string, data: { salaryAmount: number; salaryCurrency: string }) => Promise<Employee>;
 
 function createFakeRepo(total: number) {
   return {
     findEmployees: vi.fn().mockResolvedValue({ data: [], total }),
+    updateSalary: vi.fn<UpdateSalaryFn>(),
   };
 }
 
-function createFakeUpdateRepo(updateSalary: ReturnType<typeof vi.fn>) {
+function createFakeUpdateRepo(updateSalary: Mock<UpdateSalaryFn>) {
   return {
     findEmployees: vi.fn(),
     updateSalary,
@@ -92,7 +97,9 @@ describe('createEmployeeService', () => {
 
   describe('updateEmployeeSalary', () => {
     it('converts amountMajor to minor units and calls repo.updateSalary with the right args', async () => {
-      const updateSalary = vi.fn().mockResolvedValue({ id: 'abc', salaryAmount: 7_500_050, salaryCurrency: 'EUR' });
+      const updateSalary = vi
+        .fn<UpdateSalaryFn>()
+        .mockResolvedValue({ id: 'abc', salaryAmount: 7_500_050, salaryCurrency: 'EUR' } as Employee);
       const repo = createFakeUpdateRepo(updateSalary);
       const service = createEmployeeService(repo);
 
@@ -102,7 +109,7 @@ describe('createEmployeeService', () => {
     });
 
     it('rejects a non-positive, NaN, or non-finite amount without calling the repo', async () => {
-      const updateSalary = vi.fn();
+      const updateSalary = vi.fn<UpdateSalaryFn>();
       const repo = createFakeUpdateRepo(updateSalary);
       const service = createEmployeeService(repo);
 
@@ -123,7 +130,7 @@ describe('createEmployeeService', () => {
     });
 
     it('rejects an unknown currency without calling the repo', async () => {
-      const updateSalary = vi.fn();
+      const updateSalary = vi.fn<UpdateSalaryFn>();
       const repo = createFakeUpdateRepo(updateSalary);
       const service = createEmployeeService(repo);
 
@@ -134,7 +141,7 @@ describe('createEmployeeService', () => {
     });
 
     it('propagates a not-found error from the repo', async () => {
-      const updateSalary = vi.fn().mockRejectedValue(new NotFoundError('Employee not found: missing'));
+      const updateSalary = vi.fn<UpdateSalaryFn>().mockRejectedValue(new NotFoundError('Employee not found: missing'));
       const repo = createFakeUpdateRepo(updateSalary);
       const service = createEmployeeService(repo);
 
