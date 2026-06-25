@@ -12,14 +12,21 @@ function parseQueryNumber(value: unknown): number | undefined {
   return Number.isFinite(parsed) ? parsed : undefined;
 }
 
+function parseQueryString(value: unknown): string | undefined {
+  return typeof value === 'string' ? value : undefined;
+}
+
 export function createEmployeeRouter(employeeService: EmployeeService): Router {
   const router = Router();
 
   router.get('/employees', async (req, res) => {
     const page = parseQueryNumber(req.query.page);
     const pageSize = parseQueryNumber(req.query.pageSize);
+    const search = parseQueryString(req.query.search);
+    const department = parseQueryString(req.query.department);
+    const country = parseQueryString(req.query.country);
 
-    const result = await employeeService.listEmployees({ page, pageSize });
+    const result = await employeeService.listEmployees({ page, pageSize, search, department, country });
 
     res.status(200).json(result);
   });

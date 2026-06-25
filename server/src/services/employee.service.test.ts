@@ -58,5 +58,27 @@ describe('createEmployeeService', () => {
       expect(result.total).toBe(95);
       expect(result.totalPages).toBe(5);
     });
+
+    it('normalizes empty or whitespace-only filters to undefined', async () => {
+      const repo = createFakeRepo(0);
+      const service = createEmployeeService(repo);
+
+      await service.listEmployees({ search: '   ', department: '', country: undefined });
+
+      expect(repo.findEmployees).toHaveBeenCalledWith({ skip: 0, take: 25 });
+    });
+
+    it('trims and forwards filters to the repo', async () => {
+      const repo = createFakeRepo(0);
+      const service = createEmployeeService(repo);
+
+      await service.listEmployees({ search: '  ann  ', department: 'Engineering', country: 'USA' });
+
+      expect(repo.findEmployees).toHaveBeenCalledWith({
+        skip: 0,
+        take: 25,
+        filters: { search: 'ann', department: 'Engineering', country: 'USA' },
+      });
+    });
   });
 });
