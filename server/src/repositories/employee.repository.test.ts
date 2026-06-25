@@ -1,8 +1,8 @@
 import { afterAll, beforeEach, describe, expect, it } from 'vitest';
 import { EMPLOYEE_FILTER_FIXTURE } from '../test/fixtures.js';
 import { resetDb, testDb } from '../test/db.js';
-import { NotFoundError } from '../domain/errors.js';
-import { findEmployees, updateSalary } from './employee.repository.js';
+import { ConflictError, NotFoundError } from '../domain/errors.js';
+import { createEmployee, findEmployees, updateSalary } from './employee.repository.js';
 
 function buildEmployee(index: number) {
   return {
@@ -129,5 +129,28 @@ describe('updateSalary', () => {
     await expect(
       updateSalary('00000000-0000-0000-0000-000000000000', { salaryAmount: 1000, salaryCurrency: 'USD' }),
     ).rejects.toThrow(NotFoundError);
+  });
+});
+
+describe('createEmployee', () => {
+  beforeEach(async () => {
+    await resetDb();
+  });
+
+  it('inserts and returns the row with a generated id', async () => {
+    const created = await createEmployee(buildEmployee(0));
+
+    expect(created.id).toBeTruthy();
+    expect(created.name).toBe('Employee 0');
+    expect(created.email).toBe('employee0@example.com');
+
+    const reloaded = await testDb.employee.findUniqueOrThrow({ where: { id: created.id } });
+    expect(reloaded.email).toBe('employee0@example.com');
+  });
+
+  it('signals a conflict when the email is already in use', async () => {
+    await createEmployee(buildEmployee(0));
+
+    await expect(createEmployee(buildEmployee(0))).rejects.toThrow(ConflictError);
   });
 });

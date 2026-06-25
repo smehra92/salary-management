@@ -13,3 +13,11 @@ export class NotFoundError extends Error {
     this.name = 'NotFoundError';
   }
 }
+
+/** The request conflicts with an existing record (e.g. duplicate email). Routes should map this to 409. */
+export class ConflictError extends Error {
+  constructor(message: string) {
+    super(message);
+    this.name = 'ConflictError';
+  }
+}

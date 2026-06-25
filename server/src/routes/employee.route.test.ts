@@ -192,3 +192,54 @@ describe('PATCH /employees/:id/salary', () => {
     expect(response.body.error).toBeTruthy();
   });
 });
+
+function buildCreateInput(email: string) {
+  return {
+    name: 'New Employee',
+    email,
+    department: 'Engineering',
+    country: 'USA',
+    role: 'Mid',
+    amountMajor: 85_000,
+    currency: 'USD',
+    joinedAt: '2023-06-01',
+  };
+}
+
+describe('POST /employees', () => {
+  beforeEach(async () => {
+    await resetDb();
+  });
+
+  it('returns 201 with the created employee on valid input', async () => {
+    const app = createApp();
+
+    const response = await request(app).post('/employees').send(buildCreateInput('new.employee@example.com'));
+
+    expect(response.status).toBe(201);
+    expect(response.body.id).toBeTruthy();
+    expect(response.body.email).toBe('new.employee@example.com');
+  });
+
+  it('returns 400 for an invalid body', async () => {
+    const app = createApp();
+
+    const response = await request(app)
+      .post('/employees')
+      .send({ ...buildCreateInput('missing.name@example.com'), name: '' });
+
+    expect(response.status).toBe(400);
+    expect(response.body.error).toBeTruthy();
+  });
+
+  it('returns 409 when the email is already in use', async () => {
+    const app = createApp();
+    const input = buildCreateInput('duplicate@example.com');
+
+    await request(app).post('/employees').send(input);
+    const response = await request(app).post('/employees').send(input);
+
+    expect(response.status).toBe(409);
+    expect(response.body.error).toBeTruthy();
+  });
+});

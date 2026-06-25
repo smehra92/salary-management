@@ -1,15 +1,26 @@
 import type { Mock } from 'vitest';
 import { describe, expect, it, vi } from 'vitest';
 import type { Employee } from '../generated/prisma/client.js';
-import { NotFoundError, ValidationError } from '../domain/errors.js';
+import { ConflictError, NotFoundError, ValidationError } from '../domain/errors.js';
 import { createEmployeeService } from './employee.service.js';
 
 type UpdateSalaryFn = (id: string, data: { salaryAmount: number; salaryCurrency: string }) => Promise<Employee>;
+type CreateEmployeeFn = (data: {
+  name: string;
+  email: string;
+  department: string;
+  country: string;
+  role: string;
+  salaryAmount: number;
+  salaryCurrency: string;
+  joinedAt: Date;
+}) => Promise<Employee>;
 
 function createFakeRepo(total: number) {
   return {
     findEmployees: vi.fn().mockResolvedValue({ data: [], total }),
     updateSalary: vi.fn<UpdateSalaryFn>(),
+    createEmployee: vi.fn<CreateEmployeeFn>(),
   };
 }
 
@@ -17,8 +28,28 @@ function createFakeUpdateRepo(updateSalary: Mock<UpdateSalaryFn>) {
   return {
     findEmployees: vi.fn(),
     updateSalary,
+    createEmployee: vi.fn<CreateEmployeeFn>(),
   };
 }
+
+function createFakeCreateRepo(createEmployee: Mock<CreateEmployeeFn>) {
+  return {
+    findEmployees: vi.fn(),
+    updateSalary: vi.fn<UpdateSalaryFn>(),
+    createEmployee,
+  };
+}
+
+const VALID_CREATE_INPUT = {
+  name: 'Ada Lovelace',
+  email: 'ada@example.com',
+  department: 'Engineering',
+  country: 'USA',
+  role: 'Senior',
+  amountMajor: 95_000,
+  currency: 'USD',
+  joinedAt: '2023-01-01',
+};
 
 describe('createEmployeeService', () => {
   describe('listEmployees', () => {
@@ -148,6 +179,90 @@ describe('createEmployeeService', () => {
       await expect(
         service.updateEmployeeSalary('missing', { amountMajor: 1000, currency: 'USD' }),
       ).rejects.toThrow(NotFoundError);
+    });
+  });
+
+  describe('createEmployee', () => {
+    it('converts amountMajor to minor units and calls repo.createEmployee with the right shape', async () => {
+      const createEmployee = vi.fn<CreateEmployeeFn>().mockResolvedValue({ id: 'new-id' } as Employee);
+      const repo = createFakeCreateRepo(createEmployee);
+      const service = createEmployeeService(repo);
+
+      await service.createEmployee(VALID_CREATE_INPUT);
+
+      expect(createEmployee).toHaveBeenCalledWith({
+        name: 'Ada Lovelace',
+        email: 'ada@example.com',
+        department: 'Engineering',
+        country: 'USA',
+        role: 'Senior',
+        salaryAmount: 9_500_000,
+        salaryCurrency: 'USD',
+        joinedAt: new Date('2023-01-01'),
+      });
+    });
+
+    it('rejects a missing or empty required field without calling the repo', async () => {
+      const createEmployee = vi.fn<CreateEmployeeFn>();
+      const repo = createFakeCreateRepo(createEmployee);
+      const service = createEmployeeService(repo);
+
+      for (const field of ['name', 'email', 'department', 'country', 'role'] as const) {
+        await expect(service.createEmployee({ ...VALID_CREATE_INPUT, [field]: '' })).rejects.toThrow(
+          ValidationError,
+        );
+      }
+
+      expect(createEmployee).not.toHaveBeenCalled();
+    });
+
+    it('rejects a malformed email without calling the repo', async () => {
+      const createEmployee = vi.fn<CreateEmployeeFn>();
+      const repo = createFakeCreateRepo(createEmployee);
+      const service = createEmployeeService(repo);
+
+      await expect(
+        service.createEmployee({ ...VALID_CREATE_INPUT, email: 'not-an-email' }),
+      ).rejects.toThrow(ValidationError);
+      expect(createEmployee).not.toHaveBeenCalled();
+    });
+
+    it('rejects a non-positive amount or unknown currency without calling the repo', async () => {
+      const createEmployee = vi.fn<CreateEmployeeFn>();
+      const repo = createFakeCreateRepo(createEmployee);
+      const service = createEmployeeService(repo);
+
+      await expect(service.createEmployee({ ...VALID_CREATE_INPUT, amountMajor: 0 })).rejects.toThrow(
+        ValidationError,
+      );
+      await expect(service.createEmployee({ ...VALID_CREATE_INPUT, currency: 'ZZZ' })).rejects.toThrow(
+        ValidationError,
+      );
+      expect(createEmployee).not.toHaveBeenCalled();
+    });
+
+    it('rejects a joinedAt date in the future without calling the repo', async () => {
+      const createEmployee = vi.fn<CreateEmployeeFn>();
+      const repo = createFakeCreateRepo(createEmployee);
+      const service = createEmployeeService(repo);
+
+      const future = new Date();
+      future.setFullYear(future.getFullYear() + 1);
+
+      await expect(
+        service.createEmployee({ ...VALID_CREATE_INPUT, joinedAt: future.toISOString() }),
+      ).rejects.toThrow(ValidationError);
+      expect(createEmployee).not.toHaveBeenCalled();
+    });
+
+    it('propagates a conflict error from the repo', async () => {
+      const createEmployee = vi
+        .fn<CreateEmployeeFn>()
+        .mockRejectedValue(new ConflictError('Email already in use: ada@example.com'));
+      const repo = createFakeCreateRepo(createEmployee);
+      const service = createEmployeeService(repo);
+
+      await expect(service.createEmployee(VALID_CREATE_INPUT)).rejects.toThrow(ConflictError);
     });
   });
 });
