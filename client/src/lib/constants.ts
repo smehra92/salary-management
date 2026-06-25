@@ -14,3 +14,6 @@ export const COUNTRIES = ['India', 'USA', 'Germany', 'UK', 'Singapore', 'Austral
 
 // Mirrors the known ISO currency codes validated by the server (employee.service.ts).
 export const CURRENCIES = ['USD', 'INR', 'EUR', 'GBP', 'SGD', 'AUD']
+
+// Mirrors the seniority bands used in server/prisma/seed.ts.
+export const ROLES = ['Junior', 'Mid', 'Senior', 'Lead', 'Manager']

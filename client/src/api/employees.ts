@@ -1,4 +1,4 @@
-import { get, patch } from './client'
+import { get, patch, post } from './client'
 import type { Employee, PaginatedEmployees } from './types'
 
 export interface GetEmployeesParams {
@@ -21,4 +21,19 @@ export interface UpdateSalaryParams {
 
 export function updateSalary(id: string, params: UpdateSalaryParams): Promise<Employee> {
   return patch<Employee>(`/employees/${id}/salary`, params)
+}
+
+export interface CreateEmployeeInput {
+  name: string
+  email: string
+  department: string
+  country: string
+  role: string
+  amountMajor: number
+  currency: string
+  joinedAt: string
+}
+
+export function createEmployee(input: CreateEmployeeInput): Promise<Employee> {
+  return post<Employee>('/employees', input)
 }
