@@ -4,5 +4,9 @@ export default defineConfig({
   test: {
     environment: 'node',
     globals: false,
+    env: {
+      DATABASE_URL: 'file:./test.db',
+    },
+    globalSetup: './src/test/global-setup.ts',
   },
 });
