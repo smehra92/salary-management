@@ -27,7 +27,7 @@ const FRANK = { department: 'Marketing', country: 'Germany', salaryAmount: 5_000
 // 5 employees (odd count).
 const EMPLOYEES = [ALICE, BOB, CAROL, DAVID, EVE];
 
-function findGroup<T extends Record<string, unknown>>(groups: T[], key: keyof T, value: unknown): T {
+function findGroup<T extends object>(groups: T[], key: keyof T, value: unknown): T {
   const group = groups.find((g) => g[key] === value);
   if (!group) {
     throw new Error(`Expected a group for ${String(key)}=${String(value)}`);

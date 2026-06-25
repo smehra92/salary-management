@@ -75,3 +75,10 @@ export const EMPLOYEE_FILTER_FIXTURE = [
     joinedAt: new Date('2021-07-01'),
   },
 ];
+
+/** Rates matching the currencies used in EMPLOYEE_FILTER_FIXTURE. */
+export const CURRENCY_RATES_FIXTURE = [
+  { currencyCode: 'USD', rateToUsd: 1 },
+  { currencyCode: 'INR', rateToUsd: 0.012 },
+  { currencyCode: 'EUR', rateToUsd: 1.08 },
+];

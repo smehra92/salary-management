@@ -1,4 +1,5 @@
 import type { Employee, Prisma } from '../generated/prisma/client.js';
+import type { EmployeeForAnalytics } from '../domain/analytics.js';
 import { db } from '../db.js';
 
 interface EmployeeFilters {
@@ -47,4 +48,10 @@ export async function findEmployees({ skip, take, filters }: FindEmployeesParams
   ]);
 
   return { data, total };
+}
+
+export async function findAllEmployeeSalaries(): Promise<EmployeeForAnalytics[]> {
+  return db.employee.findMany({
+    select: { department: true, country: true, salaryAmount: true, salaryCurrency: true },
+  });
 }
