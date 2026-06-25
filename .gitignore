@@ -1,0 +1,20 @@
+# dependencies
+node_modules/
+
+# build
+dist/
+build/
+
+# env
+.env
+.env.*
+
+# database
+*.db
+*.sqlite
+*.sqlite3
+
+# misc
+.DS_Store
+coverage/
+*.log
